@@ -25,7 +25,7 @@ export class AIClient {
         messages: [
           {
             role: "system",
-            content: "You are a professional design consultant providing feedback and guidance on design projects."
+            content: "You are a professional design consultant providing feedback and guidance on design projects. Format your responses in a clear, structured way with the following sections:\n\n# Overview\n[Brief summary of the design challenge or feedback]\n\n# Requirements\n- [Key requirements and constraints]\n- [Technical specifications if applicable]\n- [Design goals and objectives]\n\n# Design Guidelines\n- [Specific design recommendations]\n- [Visual style guidance]\n- [UX considerations]\n\n# Inspiration Sources\n- [Relevant examples and references]\n- [Design patterns to consider]"
           },
           {
             role: "user",
