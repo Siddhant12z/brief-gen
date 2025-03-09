@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { BriefCard } from "@/components/brief-card"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
-import { AIClient } from "@/lib/ollama-client"
+import { predefinedBriefs } from "@/lib/predefined-briefs"
 
 const categories = [
   { value: "web", label: "Web Design" },
@@ -12,68 +12,55 @@ const categories = [
   { value: "ui", label: "UI Design" },
 ]
 
-const niches = [
-  { value: "tech", label: "Technology" },
-  { value: "health", label: "Healthcare" },
-  { value: "education", label: "Education" },
-  { value: "finance", label: "Finance" },
-]
-
-// Fallback briefs in case AI generation fails
-const fallbackBriefs = [
-  "Design a modern landing page for a tech startup that focuses on AI-powered productivity tools. The design should emphasize innovation and efficiency.",
-  "Create a mobile app interface for a healthcare provider that helps patients schedule appointments and view their medical records.",
-  "Design a complete brand identity for an educational platform that offers online courses in digital skills.",
-]
-
 export default function BriefsPage() {
   const [category, setCategory] = useState<string>("")
-  const [niche, setNiche] = useState<string>("")
-  const [currentBrief, setCurrentBrief] = useState(fallbackBriefs[0])
-  const [isLoading, setIsLoading] = useState(false)
-  const [aiClient, setAiClient] = useState<AIClient | null>(null)
-  
-  const generateNewBrief = useCallback(async () => {
-    if (!aiClient) return
-    
-    setIsLoading(true)
-    
-    try {
-      // Create a prompt based on selected category and niche
-      const categoryText = category ? categories.find(c => c.value === category)?.label : "design"
-      const nicheText = niche ? niches.find(n => n.value === niche)?.label : ""
-      
-      const prompt = `Generate a concise, professional design brief for a ${categoryText} project${nicheText ? ` in the ${nicheText} industry` : ""}.
-      
-      The brief should be a single paragraph that clearly describes the project requirements, target audience, and design goals.
-      
-      Make it specific, actionable, and inspiring for a designer to work with. Keep it under 100 words.`
-      
-      // Generate AI response
-      const briefContent = await aiClient.generateResponse(prompt)
-      setCurrentBrief(briefContent.trim())
-    } catch (error) {
-      console.error("Error generating brief:", error)
-      // Fallback to a random sample brief if AI generation fails
-      const randomBrief = fallbackBriefs[Math.floor(Math.random() * fallbackBriefs.length)]
-      setCurrentBrief(randomBrief)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [aiClient, category, niche])
+  const [currentBrief, setCurrentBrief] = useState("")
+  const [currentBriefIndex, setCurrentBriefIndex] = useState(0)
+  const [briefs, setBriefs] = useState<Array<{ short: string; detailed: string }>>([])
+  const [isDetailedView, setIsDetailedView] = useState(false)
 
-  // Initialize AI client
+  // Update briefs when category changes
   useEffect(() => {
-    const mistralKey = process.env.NEXT_PUBLIC_MISTRAL_API_KEY || ''
-    setAiClient(new AIClient('', mistralKey, ''))
-  }, [])
-  
-  // Generate a new brief when category or niche changes
-  useEffect(() => {
-    if ((category || niche) && aiClient) {
-      generateNewBrief()
+    if (!category) {
+      setCurrentBrief("Please select a category to view design briefs.")
+      setBriefs([])
+      setCurrentBriefIndex(0)
+      setIsDetailedView(false)
+      return
     }
-  }, [category, niche, aiClient, generateNewBrief])
+
+    // Collect all briefs from all niches for the selected category
+    const allBriefs = Object.values(predefinedBriefs[category] || {}).flat()
+    
+    if (allBriefs.length === 0) {
+      setCurrentBrief("No briefs available for this category.")
+      setBriefs([])
+      setCurrentBriefIndex(0)
+      setIsDetailedView(false)
+      return
+    }
+
+    setBriefs(allBriefs)
+    setCurrentBriefIndex(0)
+    setIsDetailedView(false)
+    setCurrentBrief(allBriefs[0].short)
+  }, [category])
+
+  const generateNewBrief = useCallback(() => {
+    if (briefs.length === 0) return
+
+    const nextIndex = (currentBriefIndex + 1) % briefs.length
+    setCurrentBriefIndex(nextIndex)
+    setIsDetailedView(false)
+    setCurrentBrief(briefs[nextIndex].short)
+  }, [briefs, currentBriefIndex])
+
+  const toggleDetailedView = useCallback(() => {
+    if (briefs.length === 0) return
+    
+    setIsDetailedView(!isDetailedView)
+    setCurrentBrief(isDetailedView ? briefs[currentBriefIndex].short : briefs[currentBriefIndex].detailed)
+  }, [briefs, currentBriefIndex, isDetailedView])
 
   return (
     <div className="dark">
@@ -95,8 +82,8 @@ export default function BriefsPage() {
             </p>
           </div>
 
-          {/* Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          {/* Controls */}
+          <div className="space-y-6 mb-8">
             <Select value={category} onValueChange={setCategory}>
               <SelectTrigger className="bg-purple-950/20 border-purple-500/20 text-white">
                 <SelectValue placeholder="Select Category" />
@@ -109,23 +96,15 @@ export default function BriefsPage() {
                 ))}
               </SelectContent>
             </Select>
-
-            <Select value={niche} onValueChange={setNiche}>
-              <SelectTrigger className="bg-purple-950/20 border-purple-500/20 text-white">
-                <SelectValue placeholder="Select Niche" />
-              </SelectTrigger>
-              <SelectContent>
-                {niches.map((niche) => (
-                  <SelectItem key={niche.value} value={niche.value}>
-                    {niche.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           {/* Brief Card */}
-          <BriefCard brief={currentBrief} onNext={generateNewBrief} />
+          <BriefCard 
+            brief={currentBrief} 
+            onNext={generateNewBrief} 
+            onToggleDetail={toggleDetailedView}
+            isDetailedView={isDetailedView}
+          />
         </div>
       </main>
     </div>
