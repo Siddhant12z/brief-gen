@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { BriefCard } from "@/components/brief-card"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { AIClient } from "@/lib/ollama-client"
@@ -31,18 +31,11 @@ export default function BriefsPage() {
   const [niche, setNiche] = useState<string>("")
   const [currentBrief, setCurrentBrief] = useState(fallbackBriefs[0])
   const [isLoading, setIsLoading] = useState(false)
+  const [aiClient, setAiClient] = useState<AIClient | null>(null)
   
-  // Initialize AI client
-  const aiClient = new AIClient()
-  
-  // Generate a new brief when category or niche changes
-  useEffect(() => {
-    if (category || niche) {
-      generateNewBrief()
-    }
-  }, [category, niche])
-
-  const generateNewBrief = async () => {
+  const generateNewBrief = useCallback(async () => {
+    if (!aiClient) return
+    
     setIsLoading(true)
     
     try {
@@ -67,7 +60,20 @@ export default function BriefsPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [aiClient, category, niche])
+
+  // Initialize AI client
+  useEffect(() => {
+    const mistralKey = process.env.NEXT_PUBLIC_MISTRAL_API_KEY || ''
+    setAiClient(new AIClient('', mistralKey, ''))
+  }, [])
+  
+  // Generate a new brief when category or niche changes
+  useEffect(() => {
+    if ((category || niche) && aiClient) {
+      generateNewBrief()
+    }
+  }, [category, niche, aiClient, generateNewBrief])
 
   return (
     <div className="dark">
