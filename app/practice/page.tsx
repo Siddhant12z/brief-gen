@@ -228,56 +228,81 @@ export default function PracticePage() {
     })
   }
 
+  // Initialize AI client with API keys
+  const aiClient = new AIClient(
+    process.env.NEXT_PUBLIC_REPLICATE_API_TOKEN || '',
+    process.env.NEXT_PUBLIC_MISTRAL_API_KEY || '',
+    process.env.NEXT_PUBLIC_CHUTES_API_KEY || ''
+  )
+
   // Generate challenges based on category
   const generateChallenges = async (duration: number) => {
     try {
+      setIsGeneratingChallenges(true)
       const categoryChallenges = challengesByCategory[selectedCategory] || []
-      const aiClient = new AIClient()
 
-      // Take only the first 5 challenges to prevent excessive API calls
-      const selectedChallenges = categoryChallenges.slice(0, 5)
+      // Take only the first 3 challenges to reduce API load
+      const selectedChallenges = categoryChallenges.slice(0, 3)
+      const generatedChallenges: Challenge[] = []
 
-      // Generate briefs using LLM
-      const shuffledChallenges = await Promise.all(
-        selectedChallenges.map(async (challenge, index) => {
-          const prompt = `Generate a structured design brief for a ${selectedCategory} project titled "${challenge.title}".
-          
-          Format the response with clear sections:
-          
-          # Task
-          [Provide a clear, specific task focusing on a single UI component or element]
-          
-          # Requirements
-          - [3-4 bullet points of specific requirements]
-          - [Include at least one point about visual style (glassmorphic, neumorphic, etc.)]
-          - [Include at least one point about functionality]
-          
-          # Difficulty Level
-          [Indicate difficulty: Beginner/Intermediate/Advanced]
-          
-          Keep the entire brief concise but actionable, with clear instructions a designer can immediately work on.`
-          
-          try {
-            const brief = await aiClient.generateResponse(prompt)
-            return { ...challenge, description: brief.trim() }
-          } catch (error) {
-            console.error('Failed to generate brief:', error)
-            return challenge
+      // Generate briefs sequentially with delay
+      for (const challenge of selectedChallenges) {
+        try {
+          // Add delay between requests
+          if (generatedChallenges.length > 0) {
+            await new Promise(resolve => setTimeout(resolve, 2000)) // 2 second delay
           }
-        })
-      )
 
-      // Shuffle the challenges for variety
-      const randomizedChallenges = shuffledChallenges.sort(() => Math.random() - 0.5)
+          const prompt = `You are a professional design mentor creating a focused practice challenge. Generate a brief design challenge for a ${selectedCategory} project titled "${challenge.title}".
 
-      setChallenges(randomizedChallenges)
+The challenge should be:
+1. Specific and focused on a single UI component or interaction
+2. Achievable within ${duration / selectedChallenges.length} minutes
+3. Clear and actionable
+4. Include specific requirements and constraints
+
+Format your response EXACTLY with these sections and headings:
+
+# Challenge
+[One sentence describing the specific UI component or interaction to design]
+
+# Requirements
+- [3-4 specific requirements]
+
+# Constraints
+- [2-3 design constraints or limitations]
+
+# Success Criteria
+- [2-3 measurable success criteria]
+
+Keep the response focused and concise. Each section should be short and actionable.`
+
+          const response = await aiClient.generateResponse(prompt)
+          generatedChallenges.push({
+            ...challenge,
+            description: response
+          })
+        } catch (error: any) {
+          console.error(`Error generating challenge for ${challenge.title}:`, error)
+          // If API fails, use the original challenge as fallback
+          generatedChallenges.push(challenge)
+          
+          // If it's a rate limit error, add a longer delay
+          if (error.message?.includes('rate limit')) {
+            await new Promise(resolve => setTimeout(resolve, 5000)) // 5 second delay
+          }
+        }
+      }
+
+      // Shuffle the challenges
+      const shuffled = [...generatedChallenges].sort(() => Math.random() - 0.5)
+      setChallenges(shuffled)
       setCurrentChallengeIndex(0)
     } catch (error) {
-      console.error('Failed to generate challenges:', error)
-      // Use default challenges if generation fails
-      const defaultChallenges = challengesByCategory[selectedCategory] || []
-      setChallenges(defaultChallenges)
-      setCurrentChallengeIndex(0)
+      console.error("Error generating challenges:", error)
+      // Fallback to predefined challenges if generation fails
+      const fallbackChallenges = challengesByCategory[selectedCategory] || []
+      setChallenges(fallbackChallenges.slice(0, 3))
     } finally {
       setIsGeneratingChallenges(false)
     }

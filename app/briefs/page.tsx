@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { BriefCard } from "@/components/brief-card"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
+import { AIClient } from "@/lib/ollama-client"
 
 const categories = [
   { value: "web", label: "Web Design" },
@@ -18,8 +19,8 @@ const niches = [
   { value: "finance", label: "Finance" },
 ]
 
-// Sample briefs (in production, these would come from an API)
-const sampleBriefs = [
+// Fallback briefs in case AI generation fails
+const fallbackBriefs = [
   "Design a modern landing page for a tech startup that focuses on AI-powered productivity tools. The design should emphasize innovation and efficiency.",
   "Create a mobile app interface for a healthcare provider that helps patients schedule appointments and view their medical records.",
   "Design a complete brand identity for an educational platform that offers online courses in digital skills.",
@@ -28,12 +29,44 @@ const sampleBriefs = [
 export default function BriefsPage() {
   const [category, setCategory] = useState<string>("")
   const [niche, setNiche] = useState<string>("")
-  const [currentBrief, setCurrentBrief] = useState(sampleBriefs[0])
+  const [currentBrief, setCurrentBrief] = useState(fallbackBriefs[0])
+  const [isLoading, setIsLoading] = useState(false)
+  
+  // Initialize AI client
+  const aiClient = new AIClient()
+  
+  // Generate a new brief when category or niche changes
+  useEffect(() => {
+    if (category || niche) {
+      generateNewBrief()
+    }
+  }, [category, niche])
 
-  const generateNewBrief = () => {
-    // In production, this would call an API
-    const randomBrief = sampleBriefs[Math.floor(Math.random() * sampleBriefs.length)]
-    setCurrentBrief(randomBrief)
+  const generateNewBrief = async () => {
+    setIsLoading(true)
+    
+    try {
+      // Create a prompt based on selected category and niche
+      const categoryText = category ? categories.find(c => c.value === category)?.label : "design"
+      const nicheText = niche ? niches.find(n => n.value === niche)?.label : ""
+      
+      const prompt = `Generate a concise, professional design brief for a ${categoryText} project${nicheText ? ` in the ${nicheText} industry` : ""}.
+      
+      The brief should be a single paragraph that clearly describes the project requirements, target audience, and design goals.
+      
+      Make it specific, actionable, and inspiring for a designer to work with. Keep it under 100 words.`
+      
+      // Generate AI response
+      const briefContent = await aiClient.generateResponse(prompt)
+      setCurrentBrief(briefContent.trim())
+    } catch (error) {
+      console.error("Error generating brief:", error)
+      // Fallback to a random sample brief if AI generation fails
+      const randomBrief = fallbackBriefs[Math.floor(Math.random() * fallbackBriefs.length)]
+      setCurrentBrief(randomBrief)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
