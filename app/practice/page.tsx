@@ -253,29 +253,9 @@ export default function PracticePage() {
             await new Promise(resolve => setTimeout(resolve, 2000)) // 2 second delay
           }
 
-          const prompt = `You are a professional design mentor creating a focused practice challenge. Generate a brief design challenge for a ${selectedCategory} project titled "${challenge.title}".
+          const prompt = `Generate a focused UI/UX practice challenge for a ${selectedCategory} project related to "${challenge.title}" that can be completed in approximately ${duration / selectedChallenges.length} minutes.
 
-The challenge should be:
-1. Specific and focused on a single UI component or interaction
-2. Achievable within ${duration / selectedChallenges.length} minutes
-3. Clear and actionable
-4. Include specific requirements and constraints
-
-Format your response EXACTLY with these sections and headings:
-
-# Challenge
-[One sentence describing the specific UI component or interaction to design]
-
-# Requirements
-- [3-4 specific requirements]
-
-# Constraints
-- [2-3 design constraints or limitations]
-
-# Success Criteria
-- [2-3 measurable success criteria]
-
-Keep the response focused and concise. Each section should be short and actionable.`
+The challenge must be extremely specific and focused on designing a single UI component or interaction (not an entire screen or app).`
 
           const response = await aiClient.generateResponse(prompt)
           generatedChallenges.push({

@@ -57,28 +57,21 @@ export class AIClient {
     try {
       const systemMessage = {
         role: 'system',
-        content: `You are a UI/UX design challenge generator. Generate specific, focused design challenges for a single UI component or interaction.
+        content: `You are a UI/UX design mentor creating focused practice challenges. Generate specific, achievable design challenges following this exact format:
 
-Format your response with the following sections, using bullet points (•) for lists:
 # Challenge
-A specific, focused challenge description for a single UI component. Always include the word "specific" or "focused" in the challenge description.
+[One specific, focused design task that can be completed in a short time. Must be a single sentence describing exactly what UI component or design element to create.]
 
-# Requirements
-• List key requirements using bullet points
-• Keep requirements clear and concise
-• Focus on essential features only
+# Resources
+## AI tools
+- [Suggest 1-2 specific AI tools that would be helpful for this challenge, with actual URLs]
 
-# Constraints
-• List design constraints using bullet points
-• Keep constraints realistic and achievable
-• Use simple animations and smooth transitions only
+## Design inspiration
+- [Suggest 1-2 specific design resources, examples, or websites that could inspire solutions to this challenge, with actual URLs]
 
-# Success Criteria
-• List measurable success criteria using bullet points
-• Keep criteria focused on user experience
-• Ensure criteria are testable
+Keep the challenge extremely specific and focused on a single UI element or component. Never create a challenge for an entire screen or application. For example, good challenges are "Design a food category selection component for a mobile app" or "Create a pricing toggle switch between monthly and annual plans".
 
-Avoid using words like "complex", "extensive", or "sophisticated". Keep challenges specific to a single component or interaction.`
+Always provide real, working URLs to actual tools and resources.`
       }
 
       const response = await this.makeRequest('https://api.mistral.ai/v1/chat/completions', {
