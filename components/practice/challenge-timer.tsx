@@ -38,13 +38,13 @@ export const ChallengeTimer = ({
   const sections = challenge?.description.split('#').filter(Boolean) || []
 
   return (
-    <div className="flex flex-col space-y-6 relative">
+    <div className="flex flex-col space-y-6 relative text-white">
       <div className="flex justify-between items-center">
         <div className="flex items-center space-x-2">
-          <div className="text-xl font-medium">Practice</div>
-          <div className="text-xl text-muted-foreground">{completedChallenges + 1}</div>
+          <div className="text-xl font-medium text-white">Practice</div>
+          <div className="text-xl text-primary">{completedChallenges + 1}</div>
         </div>
-        <div className="text-xl font-medium">{formatTime(timeLeft)}</div>
+        <div className="text-xl font-medium text-white">{formatTime(timeLeft)}</div>
       </div>
 
       <div className="bg-muted h-1 w-full rounded-full overflow-hidden">
@@ -65,8 +65,8 @@ export const ChallengeTimer = ({
           
           // For subsections, add appropriate styling
           const titleClassName = isSubsection 
-            ? "text-base font-medium text-muted-foreground mt-2" 
-            : "text-xl font-semibold mb-2"
+            ? "text-base font-medium text-primary mt-2" 
+            : "text-xl font-semibold text-white mb-2"
           
           // Only add margin-top to sections after the first one
           const sectionClassName = index > 0 ? "mt-6" : ""
@@ -75,7 +75,7 @@ export const ChallengeTimer = ({
             <div key={index} className={sectionClassName}>
               <h3 className={titleClassName}>{sectionTitle}</h3>
               {content && (
-                <div className="mt-2 text-muted-foreground">
+                <div className="mt-2 text-white">
                   {content.split('\n').map((line, i) => {
                     // Handle bullet points
                     if (line.trim().startsWith('-')) {
@@ -85,6 +85,28 @@ export const ChallengeTimer = ({
                           <span>{line.trim().substring(1).trim()}</span>
                         </div>
                       )
+                    }
+                    // Handle links - make them primary color
+                    if (line.includes('](http')) {
+                      const linkText = line.match(/\[(.*?)\]/)?.[1] || '';
+                      const linkUrl = line.match(/\((http.*?)\)/)?.[1] || '';
+                      if (linkText && linkUrl) {
+                        return (
+                          <p key={i} className="mt-1">
+                            <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                              {linkText}
+                            </a>
+                          </p>
+                        );
+                      }
+                    }
+                    // Handle note text with higher visibility
+                    if (line.trim().toLowerCase().startsWith('note:')) {
+                      return (
+                        <p key={i} className="mt-3 text-primary italic">
+                          {line}
+                        </p>
+                      );
                     }
                     return <p key={i} className="mt-1">{line}</p>
                   })}
@@ -100,13 +122,14 @@ export const ChallengeTimer = ({
           variant="outline"
           size="icon"
           onClick={() => onComplete(true)}
+          className="border-primary text-white hover:bg-primary/20"
         >
           <X className="h-4 w-4" />
         </Button>
         <div className="flex-1">
           <Button
             variant="default"
-            className="w-full"
+            className="w-full bg-primary hover:bg-primary/80 text-white"
             onClick={() => onComplete(false)}
           >
             Next
@@ -116,6 +139,7 @@ export const ChallengeTimer = ({
           variant="outline"
           size="icon"
           onClick={onToggleTimer}
+          className="border-primary text-white hover:bg-primary/20"
         >
           {isRunning ? (
             <Pause className="h-4 w-4" />
