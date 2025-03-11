@@ -124,7 +124,7 @@ export const ChallengeTimer = ({
           onClick={() => onComplete(true)}
           className="border-primary text-white hover:bg-primary/20"
         >
-          <X className="h-4 w-4" />
+          <X className="h-4 w-4 text-black" />
         </Button>
         <div className="flex-1">
           <Button
@@ -142,9 +142,9 @@ export const ChallengeTimer = ({
           className="border-primary text-white hover:bg-primary/20"
         >
           {isRunning ? (
-            <Pause className="h-4 w-4" />
+            <Pause className="h-4 w-4 text-black" />
           ) : (
-            <Play className="h-4 w-4" />
+            <Play className="h-4 w-4 text-black" />
           )}
         </Button>
       </div>
