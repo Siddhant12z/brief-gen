@@ -1,113 +1,120 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
-import { BriefCard } from "@/components/brief-card"
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
-import { predefinedBriefs } from "@/lib/predefined-briefs"
-
-const categories = [
-  { value: "web", label: "Web Design" },
-  { value: "mobile", label: "Mobile App" },
-  { value: "branding", label: "Branding" },
-  { value: "ui", label: "UI Design" },
-]
+import { useState, useEffect } from 'react'
+import BriefCard from '@/components/brief-card'
+import { cn } from '@/lib/utils'
+import { predefinedBriefs } from '@/lib/predefined-briefs'
+import { SubscriptionBanner } from '@/components/chat/subscription-banner'
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select"
 
 export default function BriefsPage() {
-  const [category, setCategory] = useState<string>("")
-  const [currentBrief, setCurrentBrief] = useState("")
-  const [currentBriefIndex, setCurrentBriefIndex] = useState(0)
-  const [briefs, setBriefs] = useState<Array<{ short: string; detailed: string }>>([])
-  const [isDetailedView, setIsDetailedView] = useState(false)
+  const [category, setCategory] = useState('web')
+  const [prompt, setPrompt] = useState('')
+  const [isFullBriefVisible, setIsFullBriefVisible] = useState(false)
+  const [fullBriefCount, setFullBriefCount] = useState(0)
+  const [isGenerating, setIsGenerating] = useState(false)
 
-  // Update briefs when category changes
+  // Load saved brief count from localStorage
   useEffect(() => {
-    if (!category) {
-      setCurrentBrief("Please select a category to view design briefs.")
-      setBriefs([])
-      setCurrentBriefIndex(0)
-      setIsDetailedView(false)
-      return
+    const savedCount = localStorage.getItem('fullBriefCount')
+    if (savedCount) {
+      setFullBriefCount(parseInt(savedCount))
     }
+  }, [])
 
-    // Collect all briefs from all niches for the selected category
-    const allBriefs = Object.values(predefinedBriefs[category] || {}).flat()
+  // Save brief count to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('fullBriefCount', fullBriefCount.toString())
+  }, [fullBriefCount])
+
+  // Initialize prompt when component loads or category changes
+  useEffect(() => {
+    const newPrompt = generateRandomBrief(category);
+    setPrompt(newPrompt);
+  }, [category]);
+
+  const handleCategoryChange = (newCategory: string) => {
+    setCategory(newCategory)
+    setIsFullBriefVisible(false)
+  }
+
+  const handleShowFullBrief = () => {
+    setIsFullBriefVisible(true)
+    setFullBriefCount(prevCount => prevCount + 1)
+  }
+
+  const generateRandomBrief = (category: string) => {
+    const categoryBriefs = predefinedBriefs[category as keyof typeof predefinedBriefs]
+    // Get a random subcategory
+    const subcategories = Object.keys(categoryBriefs)
+    const randomSubcategory = subcategories[Math.floor(Math.random() * subcategories.length)]
     
-    if (allBriefs.length === 0) {
-      setCurrentBrief("No briefs available for this category.")
-      setBriefs([])
-      setCurrentBriefIndex(0)
-      setIsDetailedView(false)
-      return
-    }
-
-    setBriefs(allBriefs)
-    setCurrentBriefIndex(0)
-    setIsDetailedView(false)
-    setCurrentBrief(allBriefs[0].short)
-  }, [category])
-
-  const generateNewBrief = useCallback(() => {
-    if (briefs.length === 0) return
-
-    const nextIndex = (currentBriefIndex + 1) % briefs.length
-    setCurrentBriefIndex(nextIndex)
-    setIsDetailedView(false)
-    setCurrentBrief(briefs[nextIndex].short)
-  }, [briefs, currentBriefIndex])
-
-  const toggleDetailedView = useCallback(() => {
-    if (briefs.length === 0) return
+    // Get a random brief from the subcategory
+    const briefs = categoryBriefs[randomSubcategory]
+    const randomBrief = briefs[Math.floor(Math.random() * briefs.length)]
     
-    setIsDetailedView(!isDetailedView)
-    setCurrentBrief(isDetailedView ? briefs[currentBriefIndex].short : briefs[currentBriefIndex].detailed)
-  }, [briefs, currentBriefIndex, isDetailedView])
+    return randomBrief.detailed
+  }
+
+  const handleNextBrief = () => {
+    setIsGenerating(true)
+    // Simulate loading for a more realistic experience
+    setTimeout(() => {
+      // Get a random brief for the selected category
+      const newPrompt = generateRandomBrief(category)
+      setPrompt(newPrompt)
+      setIsFullBriefVisible(false)
+      setIsGenerating(false)
+    }, 1500)
+  }
+
+  const showSubscriptionBanner = fullBriefCount >= 3
 
   return (
-    <div className="dark">
-      <main className="min-h-screen bg-black bg-gradient-to-br from-black via-purple-950/10 to-black p-4 md:p-8 relative overflow-hidden">
-        {/* Ambient glow effects */}
-        <div className="absolute top-1/3 left-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-[120px] opacity-60"></div>
-        <div className="absolute bottom-1/3 right-1/4 w-80 h-80 bg-purple-500/10 rounded-full blur-[100px] opacity-50"></div>
-
-        <div className="max-w-4xl mx-auto relative z-10">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 tracking-tight">
-              Design{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-purple-300">
-                Briefs
-              </span>
-            </h1>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Generate custom design briefs based on your preferences
-            </p>
-          </div>
-
-          {/* Controls */}
-          <div className="space-y-6 mb-8">
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className="bg-purple-950/20 border-purple-500/20 text-white">
-                <SelectValue placeholder="Select Category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.value} value={cat.value}>
-                    {cat.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Brief Card */}
-          <BriefCard 
-            brief={currentBrief} 
-            onNext={generateNewBrief} 
-            onToggleDetail={toggleDetailedView}
-            isDetailedView={isDetailedView}
-          />
+    <main className="min-h-screen bg-black bg-gradient-to-br from-black via-purple-950/10 to-black p-4 md:p-8 relative overflow-hidden">
+      <div className="max-w-4xl w-full mx-auto">
+        <h1 className="text-3xl font-bold mb-8 text-center">
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-purple-300">
+            Design Brief Generator
+          </span>
+        </h1>
+        
+        <div className="mb-6 w-full">
+          <Select onValueChange={handleCategoryChange} defaultValue={category}>
+            <SelectTrigger className="w-full border-purple-500/30 bg-purple-950/20 backdrop-blur-sm text-purple-200">
+              <SelectValue placeholder="Select category" />
+            </SelectTrigger>
+            <SelectContent className="bg-purple-950/80 backdrop-blur-xl border-purple-500/30">
+              {Object.keys(predefinedBriefs).map((cat) => (
+                <SelectItem key={cat} value={cat} className="text-purple-200 hover:text-white focus:text-white">
+                  {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-      </main>
-    </div>
+
+        <BriefCard 
+          category={category}
+          prompt={prompt}
+          isFullBriefVisible={isFullBriefVisible}
+          onShowFullBrief={handleShowFullBrief}
+          isSubscriptionRequired={fullBriefCount >= 3 && !isFullBriefVisible}
+          isGenerating={isGenerating}
+          onNextBrief={handleNextBrief}
+        />
+
+        {showSubscriptionBanner && (
+          <SubscriptionBanner />
+        )}
+      </div>
+    </main>
   )
 }
 

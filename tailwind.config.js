@@ -71,8 +71,47 @@ module.exports = {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },
+      typography: {
+        DEFAULT: {
+          css: {
+            maxWidth: '100%',
+            h1: {
+              color: 'rgb(216, 180, 254)', // purple-300
+              marginTop: '1rem',
+              marginBottom: '0.5rem',
+            },
+            h2: {
+              color: 'rgb(192, 132, 252)', // purple-400
+              marginTop: '1rem',
+              marginBottom: '0.5rem',
+            },
+            h3: {
+              color: 'rgb(192, 132, 252)', // purple-400
+              marginTop: '1rem',
+              marginBottom: '0.5rem',
+            },
+            p: {
+              marginTop: '0.5rem',
+              marginBottom: '0.5rem',
+            },
+            li: {
+              marginTop: '0.25rem',
+              marginBottom: '0.25rem',
+            },
+            a: {
+              color: 'rgb(147, 51, 234)', // purple-600
+              '&:hover': {
+                color: 'rgb(126, 34, 206)', // purple-700
+              },
+            },
+          },
+        },
+      },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    require('@tailwindcss/typography'),
+  ],
 }
 
