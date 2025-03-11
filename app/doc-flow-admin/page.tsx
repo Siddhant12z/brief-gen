@@ -100,8 +100,8 @@ export default function DocFlowAdmin() {
 
   if (!authenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md">
+      <div className="min-h-screen flex items-center justify-center bg-black p-4">
+        <Card className="w-full max-w-md bg-gray-900 border-gray-800">
           <CardHeader>
             <CardTitle>Documentation Access</CardTitle>
             <CardDescription>Please enter the password to access the documentation</CardDescription>
@@ -126,10 +126,10 @@ export default function DocFlowAdmin() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 bg-background min-h-screen">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen py-8 px-4 bg-black">
+      <div className="container mx-auto max-w-4xl">
         <div dangerouslySetInnerHTML={{ __html: formatMarkdown(documentationContent) }} />
-        <div className="mt-10 border-t border-gray-700 pt-4 text-center text-sm text-gray-500">
+        <div className="mt-10 border-t border-gray-800 pt-4 text-center text-sm text-gray-500">
           <Button 
             variant="ghost" 
             className="text-gray-500 hover:text-white"
