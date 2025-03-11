@@ -7,6 +7,8 @@ import { Message } from "@/components/chat/message"
 import { UsageLimitBanner } from "@/components/chat/usage-limit-banner"
 import { SubscriptionBanner } from "@/components/chat/subscription-banner"
 import { AIClient } from "@/lib/ollama-client"
+import { HeatmapGenerator, HeatmapResult } from '@/lib/heatmap-generator'
+import { HeatmapVisualization } from '@/components/design/heatmap-visualization'
 
 // Helper function to parse markdown sections into structured format
 const parseMarkdownSections = (markdown: string) => {
@@ -70,6 +72,8 @@ interface MessageData {
       content: string
     }>
   }
+  images?: string[]
+  heatmapResult?: HeatmapResult
 }
 
 export default function ChatPage() {
@@ -242,50 +246,83 @@ export default function ChatPage() {
     setMessages((prev) => [...prev, newUserMessage])
     setIsLoading(true)
 
+    // Add loading message for heatmap generation
+    const loadingMessage: MessageData = {
+      id: generateUniqueId(),
+      content: "Analyzing your design...",
+      role: "assistant",
+      type: "text",
+    }
+    setMessages((prev) => [...prev, loadingMessage])
+
     try {
-      // Convert image to base64
-      const reader = new FileReader()
-      reader.readAsDataURL(file)
-      
-      // Use a promise to handle the FileReader async operation
-      const imageData = await new Promise((resolve, reject) => {
-        reader.onload = () => {
-          try {
-            const base64Image = reader.result?.toString().split(',')[1]
-            if (!base64Image) throw new Error('Failed to convert image to base64')
-            resolve(base64Image)
-          } catch (error) {
-            reject(error)
-          }
-        }
-        reader.onerror = () => reject(new Error('Error reading file'))
+      // Initialize heatmap generator
+      const generator = new HeatmapGenerator()
+      await generator.initialize()
+
+      // Create image element for analysis
+      const img = new Image()
+      img.src = imageUrl
+      await new Promise((resolve, reject) => {
+        img.onload = resolve
+        img.onerror = reject
       })
-      
-      // Now safely outside the callback, process the image
-      const aiResponse = await aiClient.analyzeImage(imageData as string)
-      const newAiMessage: MessageData = {
+
+      // Generate heatmap
+      const heatmapResult = await generator.generateHeatmap(img)
+
+      // Remove loading message
+      setMessages((prev) => prev.filter(msg => msg.id !== loadingMessage.id))
+
+      // Add heatmap analysis message
+      const heatmapMessage: MessageData = {
+        id: generateUniqueId(),
+        content: "I've analyzed your design's visual attention patterns. Here's what I found:",
+        role: "assistant",
+        type: "heatmap",
+        imageUrl,
+        heatmapResult,
+      }
+      setMessages((prev) => [...prev, heatmapMessage])
+
+      // Generate AI feedback based on heatmap
+      const analysisPrompt = `Analyze this design based on the following attention points: ${JSON.stringify(heatmapResult.attentionPoints)}. 
+                             Consider:
+                             1. Visual Hierarchy: How effectively does the design guide attention?
+                             2. Key Areas: Are important elements receiving appropriate attention?
+                             3. Balance: Is visual weight distributed appropriately?
+                             4. Flow: How does attention move through the design?
+                             5. Improvements: What specific changes could enhance the design?
+                             
+                             Format your response with clear sections and actionable recommendations.`
+
+      const aiResponse = await aiClient.generateResponse(analysisPrompt)
+      const feedbackMessage: MessageData = {
         id: generateUniqueId(),
         content: aiResponse,
         role: "assistant",
         type: "text",
-        imageUrl,
       }
 
-        setMessages((prev) => [...prev, newAiMessage])
-        setUsageCount((prev) => prev + 1)
-      } catch (error) {
-        console.error('Error analyzing image:', error)
-        const errorMessage: MessageData = {
-          id: generateUniqueId(),
-          content: "Sorry, I encountered an error analyzing the image. Please try again.",
-          role: "assistant",
-          type: "text",
-        }
-        setMessages((prev) => [...prev, errorMessage])
-      } finally {
-        setIsLoading(false)
+      setMessages((prev) => [...prev, feedbackMessage])
+      setUsageCount((prev) => prev + 1)
+
+    } catch (error) {
+      console.error("Error analyzing design:", error)
+      // Remove loading message
+      setMessages((prev) => prev.filter(msg => msg.id !== loadingMessage.id))
+
+      const errorMessage: MessageData = {
+        id: generateUniqueId(),
+        content: "Sorry, I encountered an error analyzing your design. Please try again.",
+        role: "assistant",
+        type: "text",
       }
+      setMessages((prev) => [...prev, errorMessage])
+    } finally {
+      setIsLoading(false)
     }
+  }
 
   // Handle AI response based on user input
   const handleAIResponse = async (userMessage: string) => {
@@ -519,6 +556,57 @@ export default function ChatPage() {
     }
 
     setMessages((prev) => [...prev, limitMessage])
+  }
+
+  const handleDesignAnalysis = (result: {
+    originalUrl: string;
+    heatmapUrl: string;
+    analysis: {
+      imageSize: { width: number; height: number };
+      attentionPoints: Array<{x: number; y: number; weight: number}>;
+      dominantAreas: string[];
+      visualFlow: string;
+    }
+  }) => {
+    const prompt = `
+      I'm analyzing a design with dimensions ${result.analysis.imageSize.width}x${result.analysis.imageSize.height}px.
+      
+      Based on the attention heatmap analysis:
+      
+      1. Dominant Areas of Focus:
+      ${result.analysis.dominantAreas.join('\n')}
+      
+      2. Visual Flow Pattern:
+      ${result.analysis.visualFlow}
+      
+      Please provide:
+      1. An assessment of the current visual hierarchy
+      2. How well the design guides user attention
+      3. Specific recommendations for improving the design's effectiveness
+      4. Any potential issues with the current attention flow
+      
+      Consider principles of:
+      - Visual hierarchy and emphasis
+      - F-pattern and Z-pattern reading behaviors
+      - Gestalt principles
+      - Call-to-action placement
+      - White space usage
+    `
+
+    // Add images and prompt to chat
+    setMessages(prev => [
+      ...prev,
+      {
+        id: generateUniqueId(),
+        role: "user",
+        type: "text",
+        content: "Please analyze this design",
+        imageUrl: result.originalUrl,
+        heatmapUrl: result.heatmapUrl
+      } as MessageData
+    ])
+
+    handleSendMessage(prompt)
   }
 
   return (

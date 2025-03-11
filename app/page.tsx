@@ -29,7 +29,7 @@ export default function Home() {
       cta: "Start Practicing",
       gradient: "from-purple-900/30 to-purple-800/20",
       glow: "purple" as const,
-    },
+    }
   ]
 
   return (
